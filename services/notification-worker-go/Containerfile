@@ -1,0 +1,17 @@
+
+FROM docker.io/library/golang:1.22-alpine
+
+WORKDIR /app
+
+COPY go.mod ./
+
+RUN go mod download
+
+COPY . .
+
+RUN go build -o notification-worker main.go
+
+CMD ["./notification-worker"]
+
+HEALTHCHECK --interval=10s --timeout=3s --retries=5 \
+  CMD pgrep notification-worker > /dev/null || exit 1

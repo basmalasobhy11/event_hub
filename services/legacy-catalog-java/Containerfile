@@ -1,0 +1,30 @@
+FROM docker.io/library/maven:3.8.8-eclipse-temurin-8 AS build
+
+WORKDIR /build
+
+COPY pom.xml .
+
+RUN mvn dependency:go-offline
+
+COPY src ./src
+
+RUN mvn clean package -DskipTests
+
+
+FROM docker.io/library/eclipse-temurin:8-jre
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /build/target/legacy-catalog-1.0.0.jar app.jar
+
+EXPOSE 8081
+
+CMD ["java", "-jar", "app.jar"]
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=10 \
+  CMD code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8081/); \
+  test "$code" != "000"
